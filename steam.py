@@ -1,9 +1,3 @@
-# =============================================================
-# steampy.py - Sistema Principal SteamPy
-# Plataforma de organização, consumo e análise de jogos digitais
-# =============================================================
-
-import csv
 import os
 from datetime import datetime
 from collections import Counter
@@ -13,9 +7,6 @@ from filabacklog import FilaBackLog
 from pilharecente import PilhaRecentes
 
 
-# =============================================================
-# CLASSE SESSAO DE JOGO
-# =============================================================
 class SessaoJogo:
     def __init__(self, jogo, tempo_jogado):
         self.jogo               = jogo
@@ -41,23 +32,17 @@ class SessaoJogo:
         print(f"  {'-'*40}")
 
 
-# =============================================================
-# CLASSE PRINCIPAL STEAMPY
-# =============================================================
 class SteamPy:
     def __init__(self):
-        self.catalogo_lista  = []          # lista de objetos Jogo
-        self.catalogo_dict   = {}          # dict: id -> Jogo
+        self.catalogo_lista  = []        
+        self.catalogo_dict   = {}        
         self.backlog         = FilaBackLog()
         self.recentes        = PilhaRecentes(limite=20)
-        self.historico       = []          # lista de SessaoJogo
-        self.tempo_por_jogo  = {}          # dict: jogo_id -> horas totais
-        self.recomendacoes   = []          # lista de Jogo
-        self.ranking         = []          # lista de Jogo ordenada por tempo
+        self.historico       = []         
+        self.tempo_por_jogo  = {}         
+        self.recomendacoes   = []          
+        self.ranking         = []          
 
-    # ----------------------------------------------------------
-    # PARTE 1 - CARREGAMENTO DO CATÁLOGO
-    # ----------------------------------------------------------
     def carregar_jogos(self, nome_arquivo="dataset.csv"):
         self.catalogo_lista = []
         self.catalogo_dict  = {}
@@ -66,45 +51,64 @@ class SteamPy:
 
         try:
             with open(nome_arquivo, encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    try:
-                        def safe_float(val):
-                            try:
-                                return float(val) if val.strip() != "" else 0.0
-                            except:
-                                return 0.0
+                linhas = f.readlines()
 
-                        jogo = Jogo(
-                            idJogo      = contador,
-                            titulo      = row["title"].strip(),
-                            console     = row["console"].strip(),
-                            genero      = row["genre"].strip(),
-                            publisher   = row["publisher"].strip(),
-                            developer   = row["developer"].strip(),
-                            critic_score= safe_float(row["critic_score"]),
-                            totalSales  = safe_float(row["total_sales"]),
-                            naSales     = safe_float(row["na_sales"]),
-                            jpSales     = safe_float(row["jp_sales"]),
-                            palSales    = safe_float(row["pal_sales"]),
-                            otherSales  = safe_float(row["other_sales"]),
-                            releaseDate = row["release_date"].strip()
-                        )
-                        self.catalogo_lista.append(jogo)
-                        self.catalogo_dict[contador] = jogo
-                        contador += 1
-                    except Exception:
+            if not linhas:
+                print("  Arquivo vazio.")
+                return
+
+        
+            cabecalho = linhas[0].strip().split(",")
+
+            for linha in linhas[1:]:
+                try:
+                    partes = linha.strip().split(",")
+
+                
+                    if len(partes) != len(cabecalho):
                         invalidas += 1
+                        continue
 
-            print(f"\n  Catálogo carregado: {contador} jogos  ({invalidas} linha(s) ignorada(s))")
+                    dados = dict(zip(cabecalho, partes))
+
+                    def safe_float(val):
+                        try:
+                            return float(val) if val.strip() != "" else 0.0
+                        except:
+                            return 0.0
+
+                    jogo = Jogo(
+                        idJogo      = contador,
+                        titulo      = dados["title"].strip(),
+                        console     = dados["console"].strip(),
+                        genero      = dados["genre"].strip(),
+                        publisher   = dados["publisher"].strip(),
+                        developer   = dados["developer"].strip(),
+                        critic_score= safe_float(dados["critic_score"]),
+                        totalSales  = safe_float(dados["total_sales"]),
+                        naSales     = safe_float(dados["na_sales"]),
+                        jpSales     = safe_float(dados["jp_sales"]),
+                        palSales    = safe_float(dados["pal_sales"]),
+                        otherSales  = safe_float(dados["other_sales"]),
+                        releaseDate = dados["release_date"].strip()
+                    )
+
+                    self.catalogo_lista.append(jogo)
+                    self.catalogo_dict[contador] = jogo
+                    contador += 1
+
+                except Exception:
+                    invalidas += 1
+
+            print(f"\n  Catálogo carregado: {contador} jogos ({invalidas} linha(s) ignorada(s))")
+
         except FileNotFoundError:
             print(f"\n  ERRO: arquivo '{nome_arquivo}' não encontrado.")
         except Exception as e:
             print(f"\n  ERRO ao carregar: {e}")
 
-    # ----------------------------------------------------------
-    # PARTE 2 - BUSCA, FILTROS E ORDENAÇÃO
-    # ----------------------------------------------------------
+
+
     def listar_jogos(self, lista=None, limite=50):
         alvo = lista if lista is not None else self.catalogo_lista
         if not alvo:
@@ -175,9 +179,6 @@ class SteamPy:
         print(f"\n  Catálogo ordenado por: {label}")
         self.listar_jogos()
 
-    # ----------------------------------------------------------
-    # PARTE 3 - BACKLOG (FILA)
-    # ----------------------------------------------------------
     def adicionar_ao_backlog(self, jogo):
         self.backlog.enqueue(jogo)
 
@@ -199,9 +200,7 @@ class SteamPy:
     def carregar_backlog(self, nome="backlog.txt"):
         self.backlog.carregar(self.catalogo_dict, nome)
 
-    # ----------------------------------------------------------
-    # PARTE 4 - RECENTES (PILHA)
-    # ----------------------------------------------------------
+
     def mostrar_recentes(self):
         self.recentes.mostrar()
 
@@ -214,9 +213,7 @@ class SteamPy:
         horas = self._pedir_tempo()
         self.registrar_sessao(jogo, horas)
 
-    # ----------------------------------------------------------
-    # PARTE 5 - SIMULAÇÃO DE TEMPO / SESSÃO
-    # ----------------------------------------------------------
+
     def _pedir_tempo(self):
         while True:
             try:
@@ -232,20 +229,20 @@ class SteamPy:
     def registrar_sessao(self, jogo, tempo):
         sessao = SessaoJogo(jogo, tempo)
 
-        # Acumula tempo total do jogo
+        
         self.tempo_por_jogo[jogo.id] = self.tempo_por_jogo.get(jogo.id, 0) + tempo
 
-        # Recalcula status com tempo total acumulado
+       
         total = self.tempo_por_jogo[jogo.id]
         sessao.status = sessao._calcular_status(total)
 
-        # Salva no histórico
+        
         self.historico.append(sessao)
 
-        # Empilha nos recentes
+        
         self.recentes.push(jogo)
 
-        # Atualiza ranking
+       
         self._atualizar_ranking()
 
         print(f"\n  Sessão registrada!")
@@ -253,13 +250,11 @@ class SteamPy:
         print(f"  Tempo total em '{jogo.titulo}': {total}h")
         print(f"  Status: {sessao.status}")
 
-        # Salva histórico e recentes automaticamente
+        
         self.salvar_historico()
         self.recentes.salvar()
 
-    # ----------------------------------------------------------
-    # PARTE 6 - HISTÓRICO COMPLETO
-    # ----------------------------------------------------------
+
     def mostrar_historico(self):
         if not self.historico:
             print("  Nenhuma sessão registrada ainda.")
@@ -313,15 +308,12 @@ class SteamPy:
         except Exception as e:
             print(f"  Erro ao carregar histórico: {e}")
 
-    # ----------------------------------------------------------
-    # PARTE 7 - RECOMENDAÇÕES
-    # ----------------------------------------------------------
     def recomendar_jogos(self):
         if not self.historico:
             print("  Jogue alguns jogos primeiro para receber recomendações.")
             return []
 
-        # Identifica perfil do usuário
+        
         generos_jogados   = [s.jogo.genero   for s in self.historico]
         consoles_jogados  = [s.jogo.console  for s in self.historico]
         pub_jogados       = [s.jogo.publisher for s in self.historico]
@@ -332,7 +324,7 @@ class SteamPy:
         pub_fav      = Counter(pub_jogados).most_common(1)[0][0]
         nota_media   = sum(notas_jogadas) / len(notas_jogadas) if notas_jogadas else 0
 
-        # IDs já jogados e no backlog
+       
         ids_jogados  = {s.jogo.id for s in self.historico}
         ids_backlog  = {j.id for j in self.backlog.dados}
         ids_excluir  = ids_jogados | ids_backlog
@@ -344,7 +336,7 @@ class SteamPy:
         print(f"  Nota média jogada: {nota_media:.1f}")
         print(f"\n  Critério: gênero={genero_fav}, console={console_fav}, nota>={nota_media:.1f}")
 
-        # Pontua cada jogo do catálogo
+        
         pontuados = []
         for jogo in self.catalogo_lista:
             if jogo.id in ids_excluir:
@@ -369,9 +361,6 @@ class SteamPy:
         print(f"  {'='*55}")
         return self.recomendacoes
 
-    # ----------------------------------------------------------
-    # PARTE 8 - RANKING PESSOAL
-    # ----------------------------------------------------------
     def _atualizar_ranking(self):
         vistos = {}
         for s in self.historico:
@@ -389,13 +378,13 @@ class SteamPy:
         print(f"  {'RANKING PESSOAL':^60}")
         print(f"  {'='*60}")
 
-        # 1. Jogos mais jogados (por tempo)
+        
         print(f"\n  >> JOGOS MAIS JOGADOS (por tempo total)")
         for i, j in enumerate(self.ranking[:10], 1):
             h = self.tempo_por_jogo.get(j.id, 0)
             print(f"  {i}. {j.titulo} ({j.console}) — {h}h")
 
-        # 2. Gêneros mais jogados
+       
         print(f"\n  >> GÊNEROS MAIS JOGADOS")
         genero_tempo = {}
         for s in self.historico:
@@ -404,7 +393,7 @@ class SteamPy:
         for i, (g, h) in enumerate(sorted(genero_tempo.items(), key=lambda x: -x[1])[:5], 1):
             print(f"  {i}. {g} — {h}h")
 
-        # 3. Consoles mais jogados
+       
         print(f"\n  >> CONSOLES MAIS JOGADOS")
         console_tempo = {}
         for s in self.historico:
@@ -413,7 +402,7 @@ class SteamPy:
         for i, (c, h) in enumerate(sorted(console_tempo.items(), key=lambda x: -x[1])[:5], 1):
             print(f"  {i}. {c} — {h}h")
 
-        # 4. Top por nota dentro do histórico
+       
         print(f"\n  >> TOP JOGOS POR NOTA (do histórico)")
         jogos_hist = list({s.jogo.id: s.jogo for s in self.historico}.values())
         jogos_hist.sort(key=lambda j: j.critic_score, reverse=True)
@@ -422,9 +411,7 @@ class SteamPy:
 
         print(f"  {'='*60}")
 
-    # ----------------------------------------------------------
-    # PARTE 9 - DASHBOARD
-    # ----------------------------------------------------------
+ 
     def exibir_dashboard(self):
         total_sessoes  = len(self.historico)
         total_tempo    = sum(s.tempo_jogado for s in self.historico)
@@ -434,7 +421,7 @@ class SteamPy:
         notas_hist     = [j.critic_score for j in jogos_unicos.values() if j.critic_score > 0]
         nota_media_h   = sum(notas_hist) / len(notas_hist) if notas_hist else 0
 
-        # Status
+        
         status_count = {"iniciado": 0, "em_andamento": 0,
                         "muito_jogado": 0, "concluido_simbolicamente": 0}
         for jid, jogo in jogos_unicos.items():
@@ -448,18 +435,18 @@ class SteamPy:
             else:
                 status_count["concluido_simbolicamente"] += 1
 
-        # Favoritos
+       
         generos_lista  = [s.jogo.genero  for s in self.historico]
         consoles_lista = [s.jogo.console for s in self.historico]
         genero_fav     = Counter(generos_lista).most_common(1)[0][0]  if generos_lista  else "N/A"
         console_fav    = Counter(consoles_lista).most_common(1)[0][0] if consoles_lista else "N/A"
 
-        # Jogo mais jogado
+        
         jogo_mais = max(jogos_unicos.values(),
                         key=lambda j: self.tempo_por_jogo.get(j.id, 0),
                         default=None)
 
-        # Jogo mais popular e melhor nota no histórico
+      
         jogo_popular = max(jogos_unicos.values(),
                            key=lambda j: j.totalSales, default=None)
         jogo_melhor_nota = max(jogos_unicos.values(),
@@ -493,9 +480,7 @@ class SteamPy:
         print(f"  {'MELHOR NOTA (histórico)':<35} {nota_str:>18}")
         print(f"  {sep}\n")
 
-    # ----------------------------------------------------------
-    # PARTE 10 - PERSISTÊNCIA (carregar tudo ao iniciar)
-    # ----------------------------------------------------------
+
     def inicializar(self, dataset="dataset.csv"):
         self.carregar_jogos(dataset)
         self.carregar_backlog()
@@ -503,9 +488,7 @@ class SteamPy:
         self.recentes.carregar(self.catalogo_dict)
 
 
-# =============================================================
-# MENU INTERATIVO
-# =============================================================
+
 def _escolher_jogo(plataforma, lista=None):
     """Auxiliar: busca um jogo pelo nome e retorna o objeto escolhido."""
     alvo = lista if lista else plataforma.catalogo_lista
@@ -514,7 +497,7 @@ def _escolher_jogo(plataforma, lista=None):
     if not resultado:
         print("  Nenhum jogo encontrado.")
         return None
-    # Mostra até 100 resultados para o usuário escolher
+   
     exibir = resultado[:100]
     for i, j in enumerate(exibir, 1):
         print(f"  {i:>3}. [{j.console}] {j.titulo} | {j.genero} | Nota: {j.critic_score}")
@@ -577,28 +560,25 @@ def menu():
 
         escolha = input("  Opção: ").strip()
 
-        # 1 - Listar
+      
         if escolha == "1":
             limite = input("  Quantos jogos exibir? (Enter = 50): ").strip()
             lim = int(limite) if limite.isdigit() else 50
             plataforma.listar_jogos(limite=lim)
 
-        # 2 - Buscar por nome
+       
         elif escolha == "2":
             termo = input("  Digite parte do título: ").strip()
             plataforma.buscar_jogo_por_nome(termo)
 
-        # 3 - Filtrar gênero
         elif escolha == "3":
             genero = input("  Gênero (ex: Action, Racing, Sports): ").strip()
             plataforma.filtrar_por_genero(genero)
 
-        # 4 - Filtrar console
         elif escolha == "4":
             console = input("  Console (ex: PS4, X360, PC): ").strip()
             plataforma.filtrar_por_console(console)
 
-        # 5 - Filtrar nota
         elif escolha == "5":
             try:
                 nota = float(input("  Nota mínima (0-10): ").strip())
@@ -606,7 +586,6 @@ def menu():
             except ValueError:
                 print("  Valor inválido.")
 
-        # 6 - Filtrar vendas
         elif escolha == "6":
             try:
                 vendas = float(input("  Vendas mínimas (em milhões): ").strip())
@@ -614,67 +593,53 @@ def menu():
             except ValueError:
                 print("  Valor inválido.")
 
-        # 7 - Filtrar publisher
         elif escolha == "7":
             pub = input("  Publisher (ex: Rockstar Games): ").strip()
             plataforma.filtrar_por_publisher(pub)
 
-        # 8 - Ordenar
         elif escolha == "8":
             print("  1. Título  2. Nota  3. Vendas  4. Data  5. Console  6. Gênero")
             crit = input("  Critério: ").strip()
             plataforma.ordenar_jogos(crit)
 
-        # 9 - Adicionar ao backlog
         elif escolha == "9":
             jogo = _escolher_jogo(plataforma)
             if jogo:
                 plataforma.adicionar_ao_backlog(jogo)
 
-        # 10 - Ver backlog
         elif escolha == "10":
             plataforma.mostrar_backlog()
 
-        # 11 - Jogar próximo do backlog
         elif escolha == "11":
             plataforma.jogar_proximo()
 
-        # 12 - Ver recentes
         elif escolha == "12":
             plataforma.mostrar_recentes()
 
-        # 13 - Retomar último
         elif escolha == "13":
             plataforma.retomar_ultimo_jogo()
 
-        # 14 - Registrar sessão avulsa
         elif escolha == "14":
             jogo = _escolher_jogo(plataforma)
             if jogo:
                 horas = plataforma._pedir_tempo()
                 plataforma.registrar_sessao(jogo, horas)
 
-        # 15 - Histórico
         elif escolha == "15":
             plataforma.mostrar_historico()
 
-        # 16 - Recomendações
         elif escolha == "16":
             plataforma.recomendar_jogos()
 
-        # 17 - Ranking
         elif escolha == "17":
             plataforma.gerar_ranking_pessoal()
 
-        # 18 - Dashboard
         elif escolha == "18":
             plataforma.exibir_dashboard()
 
-        # 19 - Salvar backlog
         elif escolha == "19":
             plataforma.salvar_backlog()
 
-        # 0 - Sair
         elif escolha == "0":
             plataforma.salvar_backlog()
             plataforma.salvar_historico()
@@ -686,8 +651,5 @@ def menu():
             print("  Opção inválida.")
 
 
-# =============================================================
-# PONTO DE ENTRADA
-# =============================================================
 if __name__ == "__main__":
     menu()
